@@ -1,3 +1,6 @@
+This is a fork of the great https://github.com/Swizec/wordpress-to-markdown script here. Just needed some tweaks to better fit our use case and our integration with https://github.com/gridsome/gridsome
+
+
 # wordpress-to-markdown
 
 This script uses the standard exported XML file from WordPress, and creates a folder/file structure that contains all of the blog posts, converted to markdown format. It will also download all of the images.
