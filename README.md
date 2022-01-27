@@ -1,4 +1,4 @@
-This is a fork of the great https://github.com/Swizec/wordpress-to-markdown script here. Just needed some tweaks to better fit our use case and our integration with https://github.com/gridsome/gridsome
+This is a fork of the great https://github.com/Swizec/wordpress-to-markdown script. Just needed some tweaks to better fit our use case for our integration with https://github.com/gridsome/gridsome
 
 
 # wordpress-to-markdown
