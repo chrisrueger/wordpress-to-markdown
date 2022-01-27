@@ -58,7 +58,9 @@ function constructImageName({ urlParts, buffer }) {
             .replace(/\//g, "-")
             .replace(/\*/g, "")
     );
-    const { ext } = imageType(new Buffer(buffer));
+
+    // exclude svg since imageType does not support svg (see https://github.com/sindresorhus/image-type)
+    const { ext } = pathParts.name.endsWith(".svg") ? "svg" : imageType(Buffer.from(buffer));
 
     return `${pathParts.name}.${ext}`;
 }
@@ -91,10 +93,10 @@ async function processImage({ url, postData, images, directory }) {
             postData = postData.replace(url, `./img/${imageName}`);
             images = [...images, `./img/${imageName}`];
 
-            fs.writeFileSync(`${filePath}/${imageName}`, new Buffer(buffer));
+            fs.writeFileSync(`${filePath}/${imageName}`, Buffer.from(buffer));
         }
     } catch (e) {
-        console.log(`Keeping ref to ${url}`);
+        console.log(`Keeping ref to ${url} : ${e.message}`);
     }
 
     return [postData, images];
@@ -143,12 +145,17 @@ async function processPost(post) {
     console.log("Post Date: " + postDate);
     let postData = post["content:encoded"][0];
     console.log("Post length: " + postData.length + " bytes");
-    const slug = slugify(postTitle, {
-        remove: /[^\w\s]/g,
-    })
-        .toLowerCase()
-        .replace(/\*/g, "");
+
+    // use the slug in wordpress
+    // and not the slugifyed title
+    const slug =  post["wp:post_name"];
     console.log("Post slug: " + slug);
+
+    // const slug = slugify(postTitle, {
+    //     remove: /[^\w\s]/g,
+    // })
+    //     .toLowerCase()
+    //     .replace(/\*/g, "");
 
     // takes the longest description candidate
     const description = [
@@ -170,9 +177,10 @@ async function processPost(post) {
         .filter((url) => url.startsWith("http"));
 
     let heroImage = "";
-
-    let directory = slug;
-    let fname = `index.mdx`;
+    
+    // prefix folder with date and slug (e.g. 2021-12-13-foo-bar)
+    let directory = format(postDate, "yyyy-MM-dd") + "-" + slug;
+    let fname = `index.md`;
 
     try {
         fs.mkdirSync(`out/${directory}`);
@@ -247,9 +255,10 @@ async function processPost(post) {
         frontmatter = [
             "---",
             `title: '${postTitle.replace(/'/g, "''")}'`,
+            `slug: '${slug}'`,
             `description: "${description}"`,
-            `published: ${format(postDate, "yyyy-MM-dd")}`,
-            `redirect_from: 
+            `date: '${format(postDate, "yyyy-MM-dd")}'`,
+            `redirect_from:
             - ${redirect_from}`,
         ];
     } catch (e) {
@@ -258,7 +267,15 @@ async function processPost(post) {
     }
 
     if (categories && categories.length > 0) {
-        frontmatter.push(`categories: "${categories.join(", ")}"`);
+        //frontmatter.push(`categories: "${categories.map(cat => `'${cat}'`).join(", ")}"`);
+
+        // write out categories/tags as an array instead of string
+        frontmatter.push(`categories: `);
+        categories.forEach(cat => {
+          frontmatter.push(`  - "${cat}"`);
+        })
+
+        //frontmatter.push(`"${categories.map(cat => `'${cat}'`).join(", ")}"`);
     }
 
     frontmatter.push(`hero: ${heroImage || "../../../defaultHero.jpg"}`);
@@ -275,7 +292,7 @@ async function processPost(post) {
 async function downloadFile(url) {
     const response = await fetch(url);
     if (response.status >= 400) {
-        throw new Error("Bad response from server");
+        throw new Error("Bad response from server : StatusCode: " + response.status + " - " + response.reason);
     } else {
         return response;
     }
